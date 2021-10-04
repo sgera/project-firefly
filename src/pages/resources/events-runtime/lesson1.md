@@ -85,62 +85,47 @@ async function main (params) {
     body: ""
   };
 
-  /* handle the challenge */
-  if (params.challenge) {
+  /* we need it to run asynchronously, so we are returning a Promise */
+  return new Promise(function (resolve, reject) {
 
-    console.log('Returning challenge: ' + params.challenge);
+    var slackMessage = " Event received: " + JSON.stringify(params);
 
-    returnObject.body = new Buffer(JSON.stringify({
-      "challenge": params.challenge
-    })).toString('base64');
+    var payload = {
+      "channel": slackChannel,
+      "username": "incoming-webhook",
+      "text": slackMessage,
+      "mrkdwn": true,
+    };
 
-    return returnObject;
+    var options = {
+      method: 'POST',
+      url: slackWebhook,
+      headers:
+          { 'Content-type': 'application/json' },
+      body: JSON.stringify(payload)
+    };
 
-  } else {
+    request(options, function (error, response, body) {
+      if (error) {
 
-    /* we need it to run asynchronously, so we are returning a Promise */
-    return new Promise(function (resolve, reject) {
+        console.log("ERROR: fail to post " + response);
 
-      var slackMessage = " Event received: " + JSON.stringify(params);
+        reject(error);
 
-      var payload = {
-        "channel": slackChannel,
-        "username": "incoming-webhook",
-        "text": slackMessage,
-        "mrkdwn": true,
-      };
+      } else {
 
-      var options = {
-        method: 'POST',
-        url: slackWebhook,
-        headers:
-            { 'Content-type': 'application/json' },
-        body: JSON.stringify(payload)
-      };
+        console.log ("SUCCESS: posted to slack " + slackMessage);
 
-      request(options, function (error, response, body) {
-        if (error) {
+        returnObject.body = new Buffer(JSON.stringify({
+          "slackMessage": slackMessage
+        })).toString('base64');
 
-          console.log("ERROR: fail to post " + response);
-
-          reject(error);
-
-        } else {
-
-          console.log ("SUCCESS: posted to slack " + slackMessage);
-
-          returnObject.body = new Buffer(JSON.stringify({
-            "slackMessage": slackMessage
-          })).toString('base64');
-
-          resolve(returnObject);
-        }
-
-      });
+        resolve(returnObject);
+      }
 
     });
 
-  }
+  });
 }
 
 exports.main = main
